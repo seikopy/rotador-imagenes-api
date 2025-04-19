@@ -19,7 +19,13 @@ def rotar_imagen():
             if response.status_code != 200:
                 return jsonify({"error": "No se pudo descargar la imagen"}), 400
 
-            imagen = Image.open(io.BytesIO(response.content))
+            from PIL import UnidentifiedImageError
+
+            try:
+                imagen = Image.open(io.BytesIO(response.content))
+            except UnidentifiedImageError:
+                return jsonify({"error": "El archivo recibido no es una imagen válida."}), 400
+
         elif 'imagen' in request.files:
             imagen = Image.open(request.files['imagen'])
         else:
