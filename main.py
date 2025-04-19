@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify, send_file
 from PIL import Image
 import io
+import base64
+import requests
 
 app = Flask(__name__)
 
@@ -13,7 +15,6 @@ def rotar_imagen():
             if not url:
                 return jsonify({"error": "Falta la URL"}), 400
 
-            import requests
             response = requests.get(url)
             if response.status_code != 200:
                 return jsonify({"error": "No se pudo descargar la imagen"}), 400
@@ -32,9 +33,14 @@ def rotar_imagen():
         imagen.save(img_io, format='JPEG')
         img_io.seek(0)
 
-        import base64
         base64_img = base64.b64encode(img_io.read()).decode("utf-8")
         return jsonify({"imagen_base64": base64_img})
 
     except Exception as e:
         return jsonify({"error": f"Excepción: {str(e)}"}), 500
+
+# ✅ Esto es obligatorio para Render (escucha el puerto asignado)
+if __name__ == "__main__":
+    import os
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port)
