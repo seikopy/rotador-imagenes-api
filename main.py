@@ -6,20 +6,35 @@ app = Flask(__name__)
 
 @app.route("/rotar", methods=["POST"])
 def rotar_imagen():
-    if 'imagen' not in request.files:
-        return jsonify({"error": "No se recibió archivo 'imagen'"}), 400
+    try:
+        if request.is_json:
+            data = request.get_json()
+            url = data.get("url")
+            if not url:
+                return jsonify({"error": "Falta la URL"}), 400
 
-    imagen = Image.open(request.files['imagen'])
-    ancho, alto = imagen.size
+            import requests
+            response = requests.get(url)
+            if response.status_code != 200:
+                return jsonify({"error": "No se pudo descargar la imagen"}), 400
 
-    if ancho > alto:
-        imagen = imagen.rotate(270, expand=True)
+            imagen = Image.open(io.BytesIO(response.content))
+        elif 'imagen' in request.files:
+            imagen = Image.open(request.files['imagen'])
+        else:
+            return jsonify({"error": "No se recibió archivo 'imagen' ni 'url'"}), 400
 
-    img_io = io.BytesIO()
-    imagen.save(img_io, format='JPEG')
-    img_io.seek(0)
+        ancho, alto = imagen.size
+        if ancho > alto:
+            imagen = imagen.rotate(270, expand=True)
 
-    return send_file(img_io, mimetype='image/jpeg')
+        img_io = io.BytesIO()
+        imagen.save(img_io, format='JPEG')
+        img_io.seek(0)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+        import base64
+        base64_img = base64.b64encode(img_io.read()).decode("utf-8")
+        return jsonify({"imagen_base64": base64_img})
+
+    except Exception as e:
+        return jsonify({"error": f"Excepción: {str(e)}"}), 500
